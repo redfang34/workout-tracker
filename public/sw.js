@@ -1,4 +1,4 @@
-const CACHE = "wt6-v1";
+const CACHE = "wt6-v2";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
 
 self.addEventListener("install", (e) => {

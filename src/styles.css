@@ -359,6 +359,53 @@ input { font: inherit; color: inherit; }
   50% { background: rgba(18, 60, 38, 0.96); }
 }
 
+/* --------------------------------- charts --------------------------------- */
+.chart-card { padding-bottom: 8px; }
+.metric-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.mchip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--dim);
+  background: var(--panel-2);
+}
+.mchip.on { color: #fff; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.chart-wrap { position: relative; }
+.chart { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.chart .grid { stroke: var(--line); stroke-width: 1; opacity: 0.55; }
+.chart .tick { fill: var(--dim); font-size: 10px; font-variant-numeric: tabular-nums; }
+.chart .area { fill: var(--accent); opacity: 0.1; }
+.chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.chart .pt { fill: var(--panel); stroke: var(--accent); stroke-width: 2; }
+.chart .pt-end { fill: var(--accent); }
+.chart .pt-hi { fill: var(--accent); r: 6; }
+.chart .endlabel {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.chart-empty { padding: 14px 4px; }
+.tooltip {
+  position: absolute;
+  transform: translate(-50%, -130%);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 4;
+}
+.tt-label { color: var(--dim); margin-right: 4px; }
+.exlist-main { flex: 1; min-width: 0; }
+.spark { width: 64px; height: 20px; flex: none; }
+.spark-line { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.8; }
+.spark-dot { fill: var(--accent); }
+
 /* -------------------------------- history -------------------------------- */
 .exlistrow {
   width: 100%;

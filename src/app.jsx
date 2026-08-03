@@ -93,12 +93,157 @@ function buildLastIndex(db, excludeKey) {
 
 const fmtSet = (s) => `${s.w == null ? "BW" : s.w}×${s.r}`;
 
+/* ------------------------------ progress series ------------------------------ */
+// One point per session for an exercise: top weight, estimated 1RM (Epley),
+// total volume, best reps.
+function seriesForExercise(sets) {
+  const bySess = {};
+  for (const s of sets) (bySess[s.sess] = bySess[s.sess] || []).push(s);
+  return Object.keys(bySess)
+    .sort((a, b) => orderOf(a) - orderOf(b))
+    .map((k) => {
+      const list = bySess[k];
+      const weighted = list.filter((s) => s.w != null);
+      const topW = weighted.length ? Math.max(...weighted.map((s) => s.w)) : null;
+      const best = weighted.slice().sort((a, b) => b.w - a.w || b.r - a.r)[0];
+      const e1rm = best ? Math.round(best.w * (1 + best.r / 30)) : null;
+      const volRaw = weighted.reduce((n, s) => n + s.w * s.r, 0);
+      return {
+        key: k,
+        label: labelOf(k),
+        topW,
+        e1rm,
+        vol: volRaw > 0 ? Math.round(volRaw) : null,
+        reps: Math.max(...list.map((s) => s.r || 0)),
+      };
+    });
+}
+
+const METRICS = [
+  { id: "topW", name: "Top weight", unit: "lb", get: (p) => p.topW },
+  { id: "e1rm", name: "Est. 1RM", unit: "lb", get: (p) => p.e1rm },
+  { id: "vol", name: "Volume", unit: "lb", get: (p) => p.vol },
+  { id: "reps", name: "Best reps", unit: "reps", get: (p) => p.reps },
+];
+const metricsFor = (series) =>
+  series.some((p) => p.topW != null)
+    ? METRICS.filter((m) => m.id !== "reps")
+    : METRICS.filter((m) => m.id === "reps");
+
+function niceStep(raw) {
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (raw <= m * mag) return m * mag;
+  return 10 * mag;
+}
+
+function ProgressChart({ series, metric }) {
+  const [hi, setHi] = useState(null);
+  const pts = series
+    .map((p) => ({ ...p, v: metric.get(p) }))
+    .filter((p) => p.v != null);
+  if (pts.length < 2) {
+    return <div className="sub chart-empty">Log this exercise in two or more sessions and the trend line shows up here.</div>;
+  }
+  const W = 360, H = 190, L = 46, R = 16, T = 18, B = 26;
+  let vmin = Math.min(...pts.map((p) => p.v));
+  let vmax = Math.max(...pts.map((p) => p.v));
+  if (vmin === vmax) { vmin -= 1; vmax += 1; }
+  const pad = (vmax - vmin) * 0.15;
+  const y0 = Math.max(0, vmin - pad), y1 = vmax + pad;
+  const step = niceStep((y1 - y0) / 3);
+  const ticks = [];
+  for (let t = Math.ceil(y0 / step) * step; t <= y1; t += step) ticks.push(t);
+  const x = (i) => L + (i * (W - L - R)) / (pts.length - 1);
+  const y = (v) => T + (H - T - B) * (1 - (v - y0) / (y1 - y0));
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join("");
+  const area = `${line}L${x(pts.length - 1).toFixed(1)},${H - B}L${L},${H - B}Z`;
+  const xEvery = pts.length <= 6 ? 1 : Math.ceil(pts.length / 5);
+  const fmt = (v) => v.toLocaleString();
+
+  const onMove = (ev) => {
+    const rect = ev.currentTarget.getBoundingClientRect();
+    const px = ((ev.clientX - rect.left) / rect.width) * W;
+    let best = 0;
+    for (let i = 1; i < pts.length; i++) if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i;
+    setHi(best);
+  };
+
+  return (
+    <div className="chart-wrap">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="chart"
+        onPointerMove={onMove}
+        onPointerDown={onMove}
+        onPointerLeave={() => setHi(null)}
+      >
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={L} x2={W - R} y1={y(t)} y2={y(t)} className="grid" />
+            <text x={L - 6} y={y(t) + 3} textAnchor="end" className="tick">{fmt(t)}</text>
+          </g>
+        ))}
+        <path d={area} className="area" />
+        <path d={line} className="line" />
+        {pts.map((p, i) => (
+          <g key={p.key}>
+            {(i % xEvery === 0 || i === pts.length - 1) && (
+              <text x={x(i)} y={H - B + 14} textAnchor="middle" className="tick">{p.label}</text>
+            )}
+            <circle
+              cx={x(i)} cy={y(p.v)} r={i === pts.length - 1 ? 5 : 4}
+              className={"pt" + (i === pts.length - 1 ? " pt-end" : "") + (hi === i ? " pt-hi" : "")}
+            />
+          </g>
+        ))}
+        {hi == null && (
+          <text
+            x={Math.min(x(pts.length - 1), W - R - 4)} y={y(pts[pts.length - 1].v) - 10}
+            textAnchor="end" className="endlabel"
+          >
+            {fmt(pts[pts.length - 1].v)}
+          </text>
+        )}
+      </svg>
+      {hi != null && (
+        <div
+          className="tooltip"
+          style={{ left: `${(x(hi) / W) * 100}%`, top: `${(y(pts[hi].v) / H) * 100}%` }}
+        >
+          <span className="tt-label">{pts[hi].label}</span> {fmt(pts[hi].v)} {metric.unit}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Sparkline({ series }) {
+  const metric = metricsFor(series)[0];
+  const pts = series.map((p) => metric.get(p)).filter((v) => v != null);
+  if (pts.length < 2) return null;
+  const W = 64, H = 20, P = 3;
+  let vmin = Math.min(...pts), vmax = Math.max(...pts);
+  if (vmin === vmax) { vmin -= 1; vmax += 1; }
+  const x = (i) => P + (i * (W - 2 * P)) / (pts.length - 1);
+  const y = (v) => P + (H - 2 * P) * (1 - (v - vmin) / (vmax - vmin));
+  const d = pts.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="spark" aria-hidden="true">
+      <polyline points={d} className="spark-line" />
+      <circle cx={x(pts.length - 1)} cy={y(pts[pts.length - 1])} r="2.4" className="spark-dot" />
+    </svg>
+  );
+}
+
 /* ================================== APP ================================== */
 export default function App() {
   const [db, setDb] = useState(loadDb);
   const [route, setRoute] = useState(() => {
     const m = /^#w([1-6])d([1-4])$/.exec(location.hash || "");
-    return m ? { name: "workout", week: +m[1], day: +m[2] } : { name: "home" };
+    if (m) return { name: "workout", week: +m[1], day: +m[2] };
+    const h = /^#history(?:=(.*))?$/.exec(location.hash || "");
+    if (h) return { name: "history", sel: h[1] ? decodeURIComponent(h[1]) : null };
+    return { name: "home" };
   });
 
   useEffect(() => {
@@ -146,7 +291,7 @@ export default function App() {
     );
   }
   if (route.name === "history") {
-    return <History db={db} onBack={() => setRoute({ name: "home" })} />;
+    return <History db={db} initialSel={route.sel || null} onBack={() => setRoute({ name: "home" })} />;
   }
   return (
     <Home
@@ -573,8 +718,8 @@ function RestTimer({ secs, onClose }) {
 }
 
 /* ================================ HISTORY ================================ */
-function History({ db, onBack }) {
-  const [sel, setSel] = useState(null);
+function History({ db, initialSel, onBack }) {
+  const [sel, setSel] = useState(initialSel);
 
   const byName = useMemo(() => {
     const m = {};
@@ -593,35 +738,7 @@ function History({ db, onBack }) {
   const names = Object.keys(byName).sort();
 
   if (sel && byName[sel]) {
-    const sets = byName[sel];
-    const best = sets.reduce((b, s) => (s.w != null && (b == null || s.w > b) ? s.w : b), null);
-    const bySess = {};
-    for (const s of sets) (bySess[s.sess] = bySess[s.sess] || []).push(s);
-    const sessKeys = Object.keys(bySess).sort((a, b) => orderOf(b) - orderOf(a));
-    return (
-      <div className="app">
-        <header className="topbar">
-          <button className="backbtn" onClick={() => setSel(null)} aria-label="Back">‹</button>
-          <div>
-            <div className="topbar-title disp">{sel}</div>
-            <div className="sub">{best != null ? `Heaviest so far: ${best} lb` : "Bodyweight so far"}</div>
-          </div>
-        </header>
-        {sessKeys.map((k) => {
-          const list = bySess[k].sort((a, b) => (a.g < b.g ? -1 : a.g > b.g ? 1 : a.rd - b.rd || a.x - b.x));
-          const when = new Date(Math.max(...list.map((s) => s.t || 0)));
-          return (
-            <div className="card histrow" key={k}>
-              <div className="hist-head">
-                <span className="disp hist-key">{labelOf(k)}</span>
-                <span className="sub">{isNaN(when) ? "" : when.toLocaleDateString()}</span>
-              </div>
-              <div className="hist-sets">{list.map(fmtSet).join(" · ")}</div>
-            </div>
-          );
-        })}
-      </div>
-    );
+    return <ExerciseDetail key={sel} name={sel} sets={byName[sel]} onBack={() => setSel(null)} />;
   }
 
   return (
@@ -641,12 +758,63 @@ function History({ db, onBack }) {
         const lastSet = sets[sets.length - 1];
         return (
           <button className="card exlistrow" key={n} onClick={() => setSel(n)}>
-            <div>
+            <div className="exlist-main">
               <div className="ex-name">{n}</div>
               <div className="sub">{sets.length} sets · last {fmtSet(lastSet)} ({labelOf(lastSet.sess)})</div>
             </div>
+            <Sparkline series={seriesForExercise(sets)} />
             <span className="chev">›</span>
           </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ExerciseDetail({ name, sets, onBack }) {
+  const series = useMemo(() => seriesForExercise(sets), [sets]);
+  const metrics = metricsFor(series);
+  const [metric, setMetric] = useState(metrics[0]);
+  const best = sets.reduce((b, s) => (s.w != null && (b == null || s.w > b) ? s.w : b), null);
+  const bySess = {};
+  for (const s of sets) (bySess[s.sess] = bySess[s.sess] || []).push(s);
+  const sessKeys = Object.keys(bySess).sort((a, b) => orderOf(b) - orderOf(a));
+  return (
+    <div className="app">
+      <header className="topbar">
+        <button className="backbtn" onClick={onBack} aria-label="Back">‹</button>
+        <div>
+          <div className="topbar-title disp">{name}</div>
+          <div className="sub">{best != null ? `Heaviest so far: ${best} lb` : "Bodyweight so far"}</div>
+        </div>
+      </header>
+
+      <div className="card chart-card">
+        <div className="metric-chips">
+          {metrics.map((m) => (
+            <button
+              key={m.id}
+              className={"mchip" + (m.id === metric.id ? " on" : "")}
+              onClick={() => setMetric(m)}
+            >
+              {m.name}
+            </button>
+          ))}
+        </div>
+        <ProgressChart series={series} metric={metric} />
+      </div>
+
+      {sessKeys.map((k) => {
+        const list = bySess[k].sort((a, b) => (a.g < b.g ? -1 : a.g > b.g ? 1 : a.rd - b.rd || a.x - b.x));
+        const when = new Date(Math.max(...list.map((s) => s.t || 0)));
+        return (
+          <div className="card histrow" key={k}>
+            <div className="hist-head">
+              <span className="disp hist-key">{labelOf(k)}</span>
+              <span className="sub">{isNaN(when) ? "" : when.toLocaleDateString()}</span>
+            </div>
+            <div className="hist-sets">{list.map(fmtSet).join(" · ")}</div>
+          </div>
         );
       })}
     </div>
