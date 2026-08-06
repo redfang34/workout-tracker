@@ -109,17 +109,17 @@ const PHASE_1 = {
       title: DAY_TITLES[3],
       groups: [
         G("A", "circuit", 4, [
-          E("Hip thrust", 8),
-          E("Chest-supported row", 10),
+          E("Hip thrust", 8, "8 reps", "heavier glute day"),
+          E("Single-arm cable row", 10, "10 / side", "standing, staggered stance"),
         ]),
         G("B", "circuit", 3, [
-          E("Step-up", 8, "8 / leg"),
-          E("Seated cable row", 10),
-          E("Seated DB press", 8),
+          E("Banded lateral walk", 10, "10 steps each way"),
+          E("Straight-arm pulldown", 12),
+          E("Renegade row", 8, "8 / side", "light DBs"),
           E("Farmer's carry", 40, "40 yd", "moderate load, tall neutral posture"),
         ]),
         G("C", "circuit", 2, [
-          E("Bodyweight back extension", 12),
+          E("Dead bug", 10, "10 / side"),
           E("Pallof press", 10, "10 / side"),
         ]),
       ],
@@ -144,7 +144,7 @@ PHASE_2.days[1].groups[0] = G("A", "circuit", 4, [
 PHASE_2.days[2].groups[0] = G("A", "circuit", 4, [
   E("Seated DB press", 8),
   E("Lateral raise", 12),
-  E("Rear-delt raise", 12),
+  E("Front raise", 12),
 ]);
 
 // Phase 3: same as Phase 2 except three slots become drop sets.

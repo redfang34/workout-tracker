@@ -546,20 +546,10 @@ function GroupCard({ g, entries, lastIdx, onLog }) {
           ? (last.sets.some((s) => s.g === g.id) ? last.sets.filter((s) => s.g === g.id) : last.sets)
           : [];
 
-        // weight default: this-slot previous value > previous round this session >
-        // same round last session > last known weight for this exercise
-        let defW = null;
-        if (activeRound != null) {
-          const cur = entries[`${g.id}.${i}.${activeRound}`];
-          const prevRound = entries[`${g.id}.${i}.${activeRound - 1}`];
-          const lastSame = lastSets.find((s) => s.rd === activeRound && s.x === i) || lastSets.find((s) => s.x === i);
-          defW = cur ? cur.w
-            : prevRound ? prevRound.w
-            : lastSame ? lastSame.w
-            : last ? last.lastW
-            : null;
-        }
+        // weight starts blank on new sets (the "Last:" line above is the reference);
+        // it only prefills when re-opening an already-logged set to edit it
         const curEntry = activeRound != null ? entries[`${g.id}.${i}.${activeRound}`] : null;
+        const defW = curEntry ? curEntry.w : null;
 
         return (
           <div className="exercise" key={i}>
