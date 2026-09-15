@@ -45,7 +45,7 @@ const PHASE_1 = {
       title: DAY_TITLES[0],
       groups: [
         G("A", "circuit", 4, [
-          E("Bench press", 10, "8–10 reps"),
+          E("Dumbbell bench press", 10, "8–10 reps"),
           E("Chest-supported row", 10, "8–10 reps"),
         ]),
         G("B", "circuit", 3, [
@@ -53,7 +53,7 @@ const PHASE_1 = {
           E("Lat pulldown", 10, "10 reps", "wide, neutral grip"),
         ]),
         G("C", "circuit", 3, [
-          E("Cable chest fly", 12),
+          E("Dumbbell flye", 12),
           E("Seated cable row", 12),
         ]),
         G("D", "circuit", 2, [
@@ -100,7 +100,7 @@ const PHASE_1 = {
           E("Seated overhead triceps extension", 12),
         ]),
         G("D", "circuit", 2, [
-          E("Rear-delt fly", 15),
+          E("Machine rear-delt fly", 15),
           E("Shrug", 15),
         ]),
       ],
@@ -134,7 +134,7 @@ const PHASE_2 = clone(PHASE_1);
 PHASE_2.days[0].groups[1] = G("B", "circuit", 3, [
   E("Incline DB press", 10),
   E("Lat pulldown", 10, "10 reps", "wide, neutral grip"),
-  E("Pec deck", 12),
+  E("Cable fly", 12),
 ]);
 PHASE_2.days[1].groups[0] = G("A", "circuit", 4, [
   E("Leg press", 10, "10 reps", "controlled range — stop before the pelvis tucks under"),
@@ -149,11 +149,53 @@ PHASE_2.days[2].groups[0] = G("A", "circuit", 4, [
 
 // Phase 3: same as Phase 2 except three slots become drop sets.
 const PHASE_3 = clone(PHASE_2);
-PHASE_3.days[0].groups[2] = DROP("C", "Cable chest fly", [12, 10, 10]);
+PHASE_3.days[0].groups[2] = DROP("C", "Dumbbell flye", [12, 10, 10]);
 PHASE_3.days[1].groups[1] = DROP("B", "Leg extension", [12, 10, 10]);
 PHASE_3.days[2].groups[2] = DROP("C", "Seated overhead triceps extension", [12, 10, 10]);
 
 export const PROGRAM = { 1: PHASE_1, 2: PHASE_2, 3: PHASE_3 };
+
+// Week 1 only: Day 1 slot A was done on a barbell. Weeks 2-6 use the
+// dumbbell bench press defined in PHASE_1 above.
+const WEEK_1 = clone(PHASE_1);
+WEEK_1.days[0].groups[0].exercises[0] = E("Bench press", 10, "8–10 reps");
+
+// The one lookup the UI should use — resolves phase AND any week-level override.
+export const dayDefFor = (week, day) =>
+  (week === 1 ? WEEK_1 : PROGRAM[phaseForWeek(week)]).days[day - 1];
+
+// Exercise-name corrections applied to ALREADY-LOGGED sessions (2026-09-15).
+// Logged sets store the exercise name (`n`), so a rename in the program above
+// would otherwise split history in two. Each rule: match the old name in the
+// given day/group (and week range), rewrite to the new name. Idempotent.
+export const RENAMES = [
+  { day: 1, group: "A", from: "Bench press",     to: "Dumbbell bench press",   minWeek: 2 },
+  { day: 1, group: "C", from: "Cable chest fly", to: "Dumbbell flye" },
+  { day: 1, group: "B", from: "Pec deck",        to: "Cable fly",              minWeek: 3 },
+  { day: 3, group: "D", from: "Rear-delt fly",   to: "Machine rear-delt fly" },
+];
+
+export function migrateDb(db) {
+  if (!db || typeof db !== "object" || !db.sessions) return db;
+  let changed = 0;
+  const sessions = {};
+  for (const key of Object.keys(db.sessions)) {
+    const m = /^w(\d+)d(\d+)$/.exec(key);
+    const s = db.sessions[key];
+    if (!m || !s || !s.entries) { sessions[key] = s; continue; }
+    const week = +m[1], day = +m[2];
+    const entries = {};
+    for (const ek of Object.keys(s.entries)) {
+      const e = s.entries[ek];
+      const rule = e && RENAMES.find((r) =>
+        r.day === day && r.group === e.g && r.from === e.n && week >= (r.minWeek || 1));
+      if (rule) { entries[ek] = { ...e, n: rule.to }; changed++; }
+      else entries[ek] = e;
+    }
+    sessions[key] = { ...s, entries };
+  }
+  return changed ? { ...db, sessions } : db;
+}
 
 export const kindLabel = (g) =>
   g.kind === "dropset"

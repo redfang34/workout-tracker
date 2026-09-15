@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  PROGRAM, PHASE_REST, phaseForWeek, DAY_TITLES, DAY_SHORT, kindLabel, totalSets,
+  PHASE_REST, phaseForWeek, dayDefFor, migrateDb, DAY_TITLES, DAY_SHORT, kindLabel, totalSets,
 } from "./program.js";
 
 const DB_KEY = "wt6.v1";
@@ -15,7 +15,7 @@ const labelOf = (key) => {
 };
 
 function loadDb() {
-  try { return JSON.parse(localStorage.getItem(DB_KEY)) || {}; } catch { return {}; }
+  try { return migrateDb(JSON.parse(localStorage.getItem(DB_KEY)) || {}); } catch { return {}; }
 }
 
 /* ------------------------------ audio / haptics ------------------------------ */
@@ -62,9 +62,9 @@ function currentWeek(startDate) {
 
 function sessionStatus(db, w, d) {
   const s = (db.sessions || {})[sk(w, d)];
-  if (!s) return { state: "empty", logged: 0, total: totalSets(PROGRAM[phaseForWeek(w)].days[d - 1]) };
+  if (!s) return { state: "empty", logged: 0, total: totalSets(dayDefFor(w, d)) };
   const logged = Object.keys(s.entries || {}).length;
-  const total = totalSets(PROGRAM[phaseForWeek(w)].days[d - 1]);
+  const total = totalSets(dayDefFor(w, d));
   return { state: s.completedAt || logged >= total ? "done" : logged > 0 ? "partial" : "empty", logged, total };
 }
 
@@ -299,7 +299,7 @@ export default function App() {
       setStartDate={setStartDate}
       openDay={(week, day) => setRoute({ name: "workout", week, day })}
       openHistory={() => setRoute({ name: "history" })}
-      importDb={(next) => setDb(next)}
+      importDb={(next) => setDb(migrateDb(next))}
     />
   );
 }
@@ -426,7 +426,7 @@ function Home({ db, setStartDate, openDay, openHistory, importDb }) {
 /* ================================= WORKOUT ================================= */
 function Workout({ db, week, day, onLog, onComplete, onBack }) {
   const phase = phaseForWeek(week);
-  const dayDef = PROGRAM[phase].days[day - 1];
+  const dayDef = dayDefFor(week, day);
   const rest = PHASE_REST[phase];
   const key = sk(week, day);
   const entries = ((db.sessions || {})[key] || {}).entries || {};
