@@ -147,7 +147,7 @@ PHASE_2.days[1].groups[0] = G("A", "circuit", 4, [
   E("Standing hip abduction", 12, "12 reps", "cable or machine"),
 ]);
 PHASE_2.days[2].groups[0] = G("A", "circuit", 4, [
-  E("Seated DB press", 8),
+  E("Seated DB shoulder press", 8),
   E("Lateral raise", 12),
   E("Front raise", 12),
 ]);
@@ -247,7 +247,7 @@ const C2_PHASE_1 = {
         ]),
         G("B", "circuit", 3, [
           E("Reverse lunge", 8, "8 / leg", "light DBs"),
-          E("Standing hip abduction", 12, "12 reps", "cable"),
+          E("Standing hip abduction (cable)", 12),
           E("Renegade row", 8, "8 / side", "light DBs"),
           E("Farmer's carry", 40, "40 yd", "moderate load, tall neutral posture"),
         ]),
@@ -314,17 +314,21 @@ export const dayDefFor = (cycle, week, day) => {
 };
 export const restFor = (cycle, week) => CYCLES[cycle].rest[phaseForWeek(week)];
 
-/* ============================ CYCLE 1 MIGRATION ============================ */
-// Exercise-name corrections applied to ALREADY-LOGGED Cycle 1 sessions (2026-09-15).
-// Logged sets store the exercise name (`n`), so a rename in the program above
-// would otherwise split history in two. Each rule: match the old name in the
-// given day/group (and week range), rewrite to the new name. Idempotent.
-// Only Cycle 1 keys (`w{week}d{day}`) match — later cycles carry a `c{n}` prefix.
+/* ============================ LOGGED-NAME MIGRATION ============================ */
+// Exercise-name corrections applied to ALREADY-LOGGED sessions. Logged sets store
+// the exercise name (`n`), so a rename in the program above would otherwise split
+// history in two. Each rule: match the old name in the given cycle/day/group (and
+// week range), rewrite to the new name. Idempotent; runs on load and on import.
 export const RENAMES = [
-  { day: 1, group: "A", from: "Bench press",     to: "Dumbbell bench press",   minWeek: 2 },
-  { day: 1, group: "C", from: "Cable chest fly", to: "Dumbbell flye" },
-  { day: 1, group: "B", from: "Pec deck",        to: "Cable fly",              minWeek: 3 },
-  { day: 3, group: "D", from: "Rear-delt fly",   to: "Machine rear-delt fly" },
+  // 2026-09-15 morning: Cycle 1 equipment corrections
+  { cycle: 1, day: 1, group: "A", from: "Bench press",     to: "Dumbbell bench press",   minWeek: 2 },
+  { cycle: 1, day: 1, group: "C", from: "Cable chest fly", to: "Dumbbell flye" },
+  { cycle: 1, day: 1, group: "B", from: "Pec deck",        to: "Cable fly",              minWeek: 3 },
+  { cycle: 1, day: 3, group: "D", from: "Rear-delt fly",   to: "Machine rear-delt fly" },
+  // 2026-09-15 close: merge the Cycle 1 shoulder-press split (P1 "Seated DB shoulder press" vs P2/P3 "Seated DB press")
+  { cycle: 1, day: 3, group: "A", from: "Seated DB press", to: "Seated DB shoulder press", minWeek: 3 },
+  // Cycle 1 hip abduction was done with BANDS (John, 2026-09-15); Cycle 2 is cable, so it must not inherit
+  { cycle: 2, day: 4, group: "B", from: "Standing hip abduction", to: "Standing hip abduction (cable)" },
 ];
 
 export function migrateDb(db) {
@@ -332,15 +336,15 @@ export function migrateDb(db) {
   let changed = 0;
   const sessions = {};
   for (const key of Object.keys(db.sessions)) {
-    const m = /^w(\d+)d(\d+)$/.exec(key);
+    const m = /^(?:c(\d+))?w(\d+)d(\d+)$/.exec(key);
     const s = db.sessions[key];
     if (!m || !s || !s.entries) { sessions[key] = s; continue; }
-    const week = +m[1], day = +m[2];
+    const cycle = m[1] ? +m[1] : 1, week = +m[2], day = +m[3];
     const entries = {};
     for (const ek of Object.keys(s.entries)) {
       const e = s.entries[ek];
       const rule = e && RENAMES.find((r) =>
-        r.day === day && r.group === e.g && r.from === e.n && week >= (r.minWeek || 1));
+        (r.cycle || 1) === cycle && r.day === day && r.group === e.g && r.from === e.n && week >= (r.minWeek || 1));
       if (rule) { entries[ek] = { ...e, n: rule.to }; changed++; }
       else entries[ek] = e;
     }
