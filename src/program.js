@@ -1,6 +1,8 @@
-// 6-week strength program — 3 two-week phases x 4 training days.
-// Data is the single source of truth for the UI; entries are keyed by
-// `${group.id}.${exerciseIndex}.${round}` inside each session.
+// Strength programs, organised as CYCLES. Each cycle is a 6-week program:
+// 3 two-week phases x 4 training days. Cycle 1 is the original (completed)
+// program; Cycle 2 is the follow-on. Data is the single source of truth for
+// the UI; logged entries are keyed `${group.id}.${exerciseIndex}.${round}`
+// inside each session.
 
 export const DAY_TITLES = [
   "Chest + Back",
@@ -11,12 +13,6 @@ export const DAY_TITLES = [
 
 export const DAY_SHORT = ["Chest·Back", "Legs·Core", "Shldrs·Arms", "Glutes·Cond"];
 
-export const PHASE_REST = {
-  1: { label: "60–75 sec", secs: 75 },
-  2: { label: "45–50 sec", secs: 50 },
-  3: { label: "45–50 sec", secs: 50 },
-};
-
 export const phaseForWeek = (w) => (w <= 2 ? 1 : w <= 4 ? 2 : 3);
 
 // def = default rep count prefilled in the input (null = free entry, e.g. max reps)
@@ -25,7 +21,8 @@ const E = (name, def, label, note) =>
 
 const G = (id, kind, rounds, exercises) => ({ id, kind, rounds, exercises });
 
-const DROP = (id, name, stages) => ({
+// unit: how each stage's target reads, e.g. "reps" -> "12 reps", "/ arm" -> "10 / arm"
+const DROP = (id, name, stages, unit = "reps") => ({
   id,
   kind: "dropset",
   rounds: 1,
@@ -33,11 +30,21 @@ const DROP = (id, name, stages) => ({
   exercises: stages.map((r, i) => ({
     name,
     def: r,
-    label: `${r} reps`,
+    label: `${r} ${unit}`,
     stage: i + 1,
     ...(i > 0 ? { note: "drop the weight" } : {}),
   })),
 });
+
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+/* ================================ CYCLE 1 ================================ */
+
+export const PHASE_REST = {
+  1: { label: "60–75 sec", secs: 75 },
+  2: { label: "45–50 sec", secs: 50 },
+  3: { label: "45–50 sec", secs: 50 },
+};
 
 const PHASE_1 = {
   days: [
@@ -127,8 +134,6 @@ const PHASE_1 = {
   ],
 };
 
-const clone = (o) => JSON.parse(JSON.stringify(o));
-
 // Phase 2: rest drops to 45–50s; three slots become triplets.
 const PHASE_2 = clone(PHASE_1);
 PHASE_2.days[0].groups[1] = G("B", "circuit", 3, [
@@ -160,14 +165,161 @@ export const PROGRAM = { 1: PHASE_1, 2: PHASE_2, 3: PHASE_3 };
 const WEEK_1 = clone(PHASE_1);
 WEEK_1.days[0].groups[0].exercises[0] = E("Bench press", 10, "8–10 reps");
 
-// The one lookup the UI should use — resolves phase AND any week-level override.
-export const dayDefFor = (week, day) =>
-  (week === 1 ? WEEK_1 : PROGRAM[phaseForWeek(week)]).days[day - 1];
+/* ================================ CYCLE 2 ================================ */
+// Flat 45 sec rest for all six weeks. Exercise names are identical across
+// all three phases for any given slot (verified by tools/check-program.mjs).
 
-// Exercise-name corrections applied to ALREADY-LOGGED sessions (2026-09-15).
+const C2_REST = { label: "45 sec", secs: 45 };
+export const C2_PHASE_REST = { 1: C2_REST, 2: C2_REST, 3: C2_REST };
+
+const C2_PHASE_1 = {
+  days: [
+    {
+      title: DAY_TITLES[0],
+      groups: [
+        G("A", "circuit", 4, [
+          E("Incline DB press", 10, "8–10 reps"),
+          E("One-arm DB row", 10, "8–10 reps", "bench-supported"),
+        ]),
+        G("B", "circuit", 3, [
+          E("Dumbbell bench press", 10),
+          E("Lat pulldown (narrow, supinated)", 10),
+        ]),
+        G("C", "circuit", 3, [
+          E("Dumbbell flye", 12),
+          E("Straight-arm pulldown", 12),
+        ]),
+        G("D", "circuit", 2, [
+          E("Push-up (wide grip)", null, "max reps"),
+          E("Face pull", 15),
+        ]),
+      ],
+    },
+    {
+      title: DAY_TITLES[1],
+      groups: [
+        G("A", "circuit", 4, [
+          E("Leg press", 10),
+          E("Seated leg curl", 10),
+        ]),
+        G("B", "circuit", 3, [
+          E("Single-leg glute bridge", 10, "10 / leg"),
+          E("Leg extension", 12),
+        ]),
+        G("C", "circuit", 3, [
+          E("Box step-up", 8, "8 / leg", "weighted"),
+          E("Standing calf raise", 15),
+        ]),
+        G("D", "circuit", 2, [
+          E("Side plank", 30, "30 sec / side"),
+          E("Dead bug", 10, "10 / side"),
+          E("Pallof press", 10, "10 / side"),
+        ]),
+      ],
+    },
+    {
+      title: DAY_TITLES[2],
+      groups: [
+        G("A", "circuit", 4, [
+          E("Seated Arnold press", 8),
+          E("Cable lateral raise", 12),
+        ]),
+        G("B", "circuit", 3, [
+          E("EZ-bar curl", 10),
+          E("Overhead cable triceps extension", 10, "10 reps", "rope"),
+        ]),
+        G("C", "circuit", 3, [
+          E("Cable hammer curl", 12),
+          E("Single-arm overhead DB triceps extension", 12),
+        ]),
+        G("D", "circuit", 2, [
+          E("Machine rear-delt fly", 15),
+          E("Shrug", 15),
+        ]),
+      ],
+    },
+    {
+      title: DAY_TITLES[3],
+      groups: [
+        G("A", "circuit", 4, [
+          E("Hip thrust", 8, "8 reps", "heavier glute day"),
+          E("Chest-supported row", 10),
+        ]),
+        G("B", "circuit", 3, [
+          E("Reverse lunge", 8, "8 / leg", "light DBs"),
+          E("Standing hip abduction", 12, "12 reps", "cable"),
+          E("Renegade row", 8, "8 / side", "light DBs"),
+          E("Farmer's carry", 40, "40 yd", "moderate load, tall neutral posture"),
+        ]),
+        G("C", "circuit", 2, [
+          E("Bird dog", 8, "8 / side"),
+          E("Suitcase carry", 40, "40 yd / side", "single-arm"),
+        ]),
+      ],
+    },
+  ],
+};
+
+// Phase 2: three slots become triplets. Day 4 unchanged.
+const C2_PHASE_2 = clone(C2_PHASE_1);
+C2_PHASE_2.days[0].groups[1] = G("B", "circuit", 3, [
+  E("Dumbbell bench press", 10),
+  E("Lat pulldown (narrow, supinated)", 10),
+  E("Svend press", 15),
+]);
+C2_PHASE_2.days[1].groups[0] = G("A", "circuit", 4, [
+  E("Leg press", 10),
+  E("Seated leg curl", 10),
+  E("Glute kickback", 12, "12 reps", "cable or machine"),
+]);
+C2_PHASE_2.days[2].groups[0] = G("A", "circuit", 4, [
+  E("Seated Arnold press", 8),
+  E("Cable lateral raise", 12),
+  E("Front raise", 12),
+]);
+
+// Phase 3: same as Phase 2 except three slots become drop sets. Day 4 unchanged.
+const C2_PHASE_3 = clone(C2_PHASE_2);
+C2_PHASE_3.days[0].groups[2] = DROP("C", "Dumbbell flye", [12, 10, 10]);
+C2_PHASE_3.days[1].groups[1] = DROP("B", "Leg extension", [12, 10, 10]);
+C2_PHASE_3.days[2].groups[2] = DROP("C", "Single-arm overhead DB triceps extension", [10, 8, 8], "/ arm");
+
+/* ================================ CYCLES ================================ */
+
+export const CYCLES = {
+  1: {
+    id: 1,
+    kicker: "Cycle 1 · 3 phases · 4 days · circuits",
+    rest: PHASE_REST,
+    phases: PROGRAM,
+    weekOverrides: { 1: WEEK_1 },
+    phaseNotes: { 2: "three slots become tri-sets", 3: "drop-set finishers" },
+  },
+  2: {
+    id: 2,
+    kicker: "Cycle 2 · 3 phases · 4 days · circuits",
+    rest: C2_PHASE_REST,
+    phases: { 1: C2_PHASE_1, 2: C2_PHASE_2, 3: C2_PHASE_3 },
+    weekOverrides: {},
+    phaseNotes: { 2: "three slots become tri-sets", 3: "drop-set finishers" },
+  },
+};
+export const CYCLE_IDS = Object.keys(CYCLES).map(Number).sort((a, b) => a - b);
+
+// The one lookup the UI should use — resolves cycle, phase AND any week-level override.
+export const dayDefFor = (cycle, week, day) => {
+  const c = CYCLES[cycle];
+  const src = c.weekOverrides[week] || c.phases[phaseForWeek(week)];
+  return src.days[day - 1];
+};
+export const restFor = (cycle, week) => CYCLES[cycle].rest[phaseForWeek(week)];
+
+/* ============================ CYCLE 1 MIGRATION ============================ */
+// Exercise-name corrections applied to ALREADY-LOGGED Cycle 1 sessions (2026-09-15).
 // Logged sets store the exercise name (`n`), so a rename in the program above
 // would otherwise split history in two. Each rule: match the old name in the
 // given day/group (and week range), rewrite to the new name. Idempotent.
+// Only Cycle 1 keys (`w{week}d{day}`) match — later cycles carry a `c{n}` prefix.
 export const RENAMES = [
   { day: 1, group: "A", from: "Bench press",     to: "Dumbbell bench press",   minWeek: 2 },
   { day: 1, group: "C", from: "Cable chest fly", to: "Dumbbell flye" },

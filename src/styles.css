@@ -419,3 +419,21 @@ input { font: inherit; color: inherit; }
 .hist-head { display: flex; justify-content: space-between; align-items: baseline; }
 .hist-key { font-size: 20px; color: var(--accent); }
 .hist-sets { margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------ cycle switch ------------------------------ */
+.cyctabs {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--panel-2);
+  margin-bottom: 14px;
+}
+.cyctab {
+  padding: 5px 16px;
+  border-radius: 999px;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+.cyctab.on { color: #fff; background: var(--accent); }

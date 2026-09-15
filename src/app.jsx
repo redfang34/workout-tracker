@@ -1,18 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  PHASE_REST, phaseForWeek, dayDefFor, migrateDb, DAY_TITLES, DAY_SHORT, kindLabel, totalSets,
+  CYCLES, CYCLE_IDS, phaseForWeek, dayDefFor, restFor, migrateDb, DAY_SHORT, kindLabel, totalSets,
 } from "./program.js";
+import { sk, orderOf, labelOf, startOf } from "./keys.js";
 
 const DB_KEY = "wt6.v1";
-const sk = (w, d) => `w${w}d${d}`;
-const orderOf = (key) => {
-  const m = /^w(\d+)d(\d+)$/.exec(key);
-  return m ? (+m[1] - 1) * 4 + (+m[2] - 1) : -1;
-};
-const labelOf = (key) => {
-  const o = orderOf(key);
-  return `W${Math.floor(o / 4) + 1}·D${(o % 4) + 1}`;
-};
 
 function loadDb() {
   try { return migrateDb(JSON.parse(localStorage.getItem(DB_KEY)) || {}); } catch { return {}; }
@@ -60,11 +52,11 @@ function currentWeek(startDate) {
   return Math.min(6, Math.max(1, Math.floor(days / 7) + 1));
 }
 
-function sessionStatus(db, w, d) {
-  const s = (db.sessions || {})[sk(w, d)];
-  if (!s) return { state: "empty", logged: 0, total: totalSets(dayDefFor(w, d)) };
+function sessionStatus(db, c, w, d) {
+  const s = (db.sessions || {})[sk(c, w, d)];
+  if (!s) return { state: "empty", logged: 0, total: totalSets(dayDefFor(c, w, d)) };
   const logged = Object.keys(s.entries || {}).length;
-  const total = totalSets(dayDefFor(w, d));
+  const total = totalSets(dayDefFor(c, w, d));
   return { state: s.completedAt || logged >= total ? "done" : logged > 0 ? "partial" : "empty", logged, total };
 }
 
@@ -239,8 +231,8 @@ function Sparkline({ series }) {
 export default function App() {
   const [db, setDb] = useState(loadDb);
   const [route, setRoute] = useState(() => {
-    const m = /^#w([1-6])d([1-4])$/.exec(location.hash || "");
-    if (m) return { name: "workout", week: +m[1], day: +m[2] };
+    const m = /^#(?:c(\d+))?w([1-6])d([1-4])$/.exec(location.hash || "");
+    if (m && CYCLES[m[1] ? +m[1] : 1]) return { name: "workout", cycle: m[1] ? +m[1] : 1, week: +m[2], day: +m[3] };
     const h = /^#history(?:=(.*))?$/.exec(location.hash || "");
     if (h) return { name: "history", sel: h[1] ? decodeURIComponent(h[1]) : null };
     return { name: "home" };
@@ -251,13 +243,13 @@ export default function App() {
   }, [db]);
 
   useEffect(() => {
-    const h = route.name === "workout" ? `#w${route.week}d${route.day}` : "";
+    const h = route.name === "workout" ? `#${sk(route.cycle, route.week, route.day)}` : "";
     try { history.replaceState(null, "", location.pathname + location.search + h); } catch { /* noop */ }
   }, [route]);
 
-  const logSet = (week, day, gid, exIdx, round, entry) =>
+  const logSet = (cycle, week, day, gid, exIdx, round, entry) =>
     setDb((d) => {
-      const key = sk(week, day);
+      const key = sk(cycle, week, day);
       const s = (d.sessions || {})[key] || { entries: {} };
       return {
         ...d,
@@ -268,20 +260,27 @@ export default function App() {
       };
     });
 
-  const markComplete = (week, day) =>
+  const markComplete = (cycle, week, day) =>
     setDb((d) => {
-      const key = sk(week, day);
+      const key = sk(cycle, week, day);
       const s = (d.sessions || {})[key];
       if (!s || s.completedAt) return d;
       return { ...d, sessions: { ...d.sessions, [key]: { ...s, completedAt: Date.now() } } };
     });
 
-  const setStartDate = (v) => setDb((d) => ({ ...d, startDate: v || undefined }));
+  // Cycle 1 keeps db.startDate (original schema); later cycles use db.cycleStart[cycle].
+  const setStartDate = (cycle, v) => setDb((d) =>
+    cycle === 1
+      ? { ...d, startDate: v || undefined }
+      : { ...d, cycleStart: { ...(d.cycleStart || {}), [cycle]: v || undefined } });
+  const setCycle = (c) => setDb((d) => ({ ...d, cycle: c }));
+  const cycle = CYCLES[db.cycle] ? db.cycle : 1;
 
   if (route.name === "workout") {
     return (
       <Workout
         db={db}
+        cycle={route.cycle}
         week={route.week}
         day={route.day}
         onLog={logSet}
@@ -295,9 +294,12 @@ export default function App() {
   }
   return (
     <Home
+      key={cycle}
       db={db}
+      cycle={cycle}
+      setCycle={setCycle}
       setStartDate={setStartDate}
-      openDay={(week, day) => setRoute({ name: "workout", week, day })}
+      openDay={(c, week, day) => setRoute({ name: "workout", cycle: c, week, day })}
       openHistory={() => setRoute({ name: "history" })}
       importDb={(next) => setDb(migrateDb(next))}
     />
@@ -305,16 +307,20 @@ export default function App() {
 }
 
 /* ================================== HOME ================================== */
-function Home({ db, setStartDate, openDay, openHistory, importDb }) {
-  const cw = currentWeek(db.startDate);
-  const [editingDate, setEditingDate] = useState(!db.startDate);
+function Home({ db, cycle, setCycle, setStartDate, openDay, openHistory, importDb }) {
+  const cdef = CYCLES[cycle];
+  const start = startOf(db, cycle);
+  const cw = currentWeek(start);
+  const [editingDate, setEditingDate] = useState(!start);
+  const doneCount = [1, 2, 3, 4, 5, 6].reduce(
+    (n, w) => n + [1, 2, 3, 4].filter((d) => sessionStatus(db, cycle, w, d).state === "done").length, 0);
   const fileRef = useRef(null);
 
   // Suggested next: first non-complete day of the current week.
   let suggest = null;
   if (cw) {
     for (let d = 1; d <= 4; d++) {
-      if (sessionStatus(db, cw, d).state !== "done") { suggest = { w: cw, d }; break; }
+      if (sessionStatus(db, cycle, cw, d).state !== "done") { suggest = { w: cw, d }; break; }
     }
   }
 
@@ -347,13 +353,28 @@ function Home({ db, setStartDate, openDay, openHistory, importDb }) {
   return (
     <div className="app">
       <header className="hero">
-        <div className="hero-kicker">3 phases · 4 days · circuits</div>
+        <div className="cyctabs" role="tablist">
+          {CYCLE_IDS.map((c) => (
+            <button
+              key={c}
+              role="tab"
+              aria-selected={c === cycle}
+              className={"cyctab disp" + (c === cycle ? " on" : "")}
+              onClick={() => setCycle(c)}
+            >
+              CYCLE {c}
+            </button>
+          ))}
+        </div>
+        <div className="hero-kicker">{cdef.kicker}</div>
         <h1 className="disp hero-title">6-WEEK<br />STRENGTH</h1>
         {cw ? (
           <div className="hero-status">
-            <span className="pill pill-accent">Week {cw} of 6</span>
+            {doneCount >= 24
+              ? <span className="pill pill-accent">Complete ✓</span>
+              : <span className="pill pill-accent">Week {cw} of 6</span>}
             <span className="pill">Phase {phaseForWeek(cw)}</span>
-            <span className="pill">Rest {PHASE_REST[phaseForWeek(cw)].label}</span>
+            <span className="pill">Rest {restFor(cycle, cw).label}</span>
             <button className="linkbtn" onClick={() => setEditingDate((v) => !v)}>start date</button>
           </div>
         ) : null}
@@ -361,14 +382,14 @@ function Home({ db, setStartDate, openDay, openHistory, importDb }) {
 
       {editingDate && (
         <div className="card setup">
-          <div className="card-title">Program start date</div>
+          <div className="card-title">Cycle {cycle} start date</div>
           <p className="sub">Set once — the app figures out which week you're on. You can still tap any day below.</p>
           <div className="setup-row">
             <input
               type="date"
               className="date-input"
-              defaultValue={db.startDate || ""}
-              onChange={(e) => e.target.value && (setStartDate(e.target.value), setEditingDate(false))}
+              defaultValue={start || ""}
+              onChange={(e) => e.target.value && (setStartDate(cycle, e.target.value), setEditingDate(false))}
             />
           </div>
         </div>
@@ -381,9 +402,8 @@ function Home({ db, setStartDate, openDay, openHistory, importDb }) {
             <div>
               <div className="phase-title">Phase {p} · Weeks {p * 2 - 1}–{p * 2}</div>
               <div className="sub">
-                Rest {PHASE_REST[p].label}
-                {p === 2 && " · three slots become tri-sets"}
-                {p === 3 && " · drop-set finishers"}
+                Rest {cdef.rest[p].label}
+                {cdef.phaseNotes[p] ? ` · ${cdef.phaseNotes[p]}` : ""}
               </div>
             </div>
           </div>
@@ -391,13 +411,13 @@ function Home({ db, setStartDate, openDay, openHistory, importDb }) {
             <div className="weekrow" key={w}>
               <span className={"disp weeklabel" + (cw === w ? " now" : "")}>W{w}</span>
               {[1, 2, 3, 4].map((d) => {
-                const st = sessionStatus(db, w, d);
+                const st = sessionStatus(db, cycle, w, d);
                 const isSuggest = suggest && suggest.w === w && suggest.d === d;
                 return (
                   <button
                     key={d}
                     className={"daybtn " + st.state + (isSuggest ? " suggest" : "")}
-                    onClick={() => openDay(w, d)}
+                    onClick={() => openDay(cycle, w, d)}
                   >
                     <span className="daybtn-num disp">{d}</span>
                     <span className="daybtn-name">{DAY_SHORT[d - 1]}</span>
@@ -424,11 +444,11 @@ function Home({ db, setStartDate, openDay, openHistory, importDb }) {
 }
 
 /* ================================= WORKOUT ================================= */
-function Workout({ db, week, day, onLog, onComplete, onBack }) {
+function Workout({ db, cycle, week, day, onLog, onComplete, onBack }) {
   const phase = phaseForWeek(week);
-  const dayDef = dayDefFor(week, day);
-  const rest = PHASE_REST[phase];
-  const key = sk(week, day);
+  const dayDef = dayDefFor(cycle, week, day);
+  const rest = restFor(cycle, week);
+  const key = sk(cycle, week, day);
   const entries = ((db.sessions || {})[key] || {}).entries || {};
   const [timer, setTimer] = useState(null);
   const lastIdx = useMemo(() => buildLastIndex(db, key), [db, key]);
@@ -437,7 +457,7 @@ function Workout({ db, week, day, onLog, onComplete, onBack }) {
   const logged = Object.keys(entries).length;
   const complete = logged >= total;
 
-  useEffect(() => { if (complete) onComplete(week, day); }, [complete]);
+  useEffect(() => { if (complete) onComplete(cycle, week, day); }, [complete]);
 
   // Keep the screen on mid-workout where supported.
   useEffect(() => {
@@ -459,7 +479,7 @@ function Workout({ db, week, day, onLog, onComplete, onBack }) {
     const ex = g.exercises[exIdx];
     const wasLogged = !!entries[`${g.id}.${exIdx}.${round}`];
     const entry = { n: ex.name, g: g.id, x: exIdx, rd: round, w: val.w, r: val.r, t: Date.now() };
-    onLog(week, day, g.id, exIdx, round, entry);
+    onLog(cycle, week, day, g.id, exIdx, round, entry);
     const after = { ...entries, [`${g.id}.${exIdx}.${round}`]: entry };
     const roundDone = g.exercises.every((_, i) => after[`${g.id}.${i}.${round}`]);
     const gi = dayDef.groups.indexOf(g);
@@ -472,7 +492,7 @@ function Workout({ db, week, day, onLog, onComplete, onBack }) {
       <header className="topbar">
         <button className="backbtn" onClick={onBack} aria-label="Back">‹</button>
         <div>
-          <div className="topbar-title disp">W{week} · Day {day} — {dayDef.title}</div>
+          <div className="topbar-title disp">C{cycle} · W{week} · Day {day} — {dayDef.title}</div>
           <div className="sub">Phase {phase} · Rest {rest.label} between rounds · {logged}/{total} sets</div>
         </div>
       </header>
@@ -485,7 +505,7 @@ function Workout({ db, week, day, onLog, onComplete, onBack }) {
 
       {dayDef.groups.map((g) => (
         <GroupCard
-          key={g.id + phase + week + day}
+          key={`${cycle}.${week}.${day}.${g.id}`}
           g={g}
           entries={entries}
           lastIdx={lastIdx}
