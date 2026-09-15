@@ -10,6 +10,12 @@
   --accent-soft: rgba(255, 90, 45, 0.14);
   --good: #2fd07a;
   --good-soft: rgba(47, 208, 122, 0.12);
+  /* Space reserved above the content for the phone's status bar (clock, signal, battery),
+     which iOS draws translucently over the page in standalone mode. */
+  --top-gap: env(safe-area-inset-top, 0px);
+}
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  :root { --top-gap: max(env(safe-area-inset-top, 0px), 20px); }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -36,7 +42,7 @@ body {
 .app {
   max-width: 520px;
   margin: 0 auto;
-  padding: 14px 14px calc(60px + env(safe-area-inset-bottom));
+  padding: calc(14px + var(--top-gap)) 14px calc(60px + env(safe-area-inset-bottom));
 }
 
 .sub { color: var(--dim); font-size: 13px; }
@@ -137,7 +143,8 @@ input { font: inherit; color: inherit; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 0 14px;
+  padding: calc(14px + var(--top-gap)) 0 14px;
+  margin-top: calc(-14px - var(--top-gap));
   position: sticky;
   top: 0;
   background: linear-gradient(var(--bg) 85%, transparent);
