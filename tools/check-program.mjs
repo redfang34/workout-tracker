@@ -86,15 +86,18 @@ const carry3 = [...c3].filter((n) => earlier.has(n)).sort();
 const fresh3 = [...c3].filter((n) => !earlier.has(n)).sort();
 console.log(`\n== Cycle 3 names that carry an earlier reference (${carry3.length}) ==\n  ${carry3.join("\n  ")}`);
 console.log(`\n== Cycle 3 names starting fresh (${fresh3.length}) ==\n  ${fresh3.join("\n  ")}`);
-ok(JSON.stringify(carry3) === JSON.stringify(["Hip thrust", "Incline DB press", "Leg press"]),
-  `Cycle 3 carry-over must be exactly Hip thrust / Incline DB press / Leg press, got: ${carry3.join(", ")}`);
+ok(JSON.stringify(carry3) === JSON.stringify(["Hip thrust", "Incline DB press", "Leg press", "Seated leg curl"]),
+  `Cycle 3 carry-over must be exactly Hip thrust / Incline DB press / Leg press / Seated leg curl, got: ${carry3.join(", ")}`);
+// spine rule (three herniated lower-lumbar discs): these must never appear in Cycle 3
+for (const banned of [/deadlift/i, /pull-through/i, /good morning/i, /\bchop\b/i, /hanging/i, /standing .*press/i, /crunch/i, /sit-up/i, /twist/i])
+  for (const n of c3) ok(!banned.test(n), `Cycle 3 "${n}" breaks the spine rule (${banned})`);
 // a fresh name must not be a re-spelling of an earlier one either
 const earlierNorm = new Set([...earlier].map(norm));
 for (const n of fresh3) ok(!earlierNorm.has(norm(n)), `Cycle 3 "${n}" is a re-spelling of an earlier name`);
 // Phase 3 drop sets land where intended
 const dropNames = (c) => [1, 2, 3, 4].flatMap((d) =>
   dayDefFor(c, 5, d).groups.filter((g) => g.kind === "dropset").map((g) => `D${d}-${g.id} ${g.exercises[0].name}`));
-ok(JSON.stringify(dropNames(3)) === JSON.stringify(["D1-C Incline DB flye", "D2-B Leg press", "D3-C Reverse-grip cable curl"]),
+ok(JSON.stringify(dropNames(3)) === JSON.stringify(["D1-C Incline DB flye", "D2-B Seated leg curl", "D3-C Reverse-grip cable curl"]),
   `Cycle 3 drop sets: ${dropNames(3).join(" | ")}`);
 // Day 4 identical across phases
 ok(JSON.stringify(dayDefFor(3, 1, 4)) === JSON.stringify(dayDefFor(3, 6, 4)), "Cycle 3 Day 4 must not change between phases");

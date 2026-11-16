@@ -285,10 +285,13 @@ C2_PHASE_3.days[1].groups[1] = DROP("B", "Leg extension", [12, 10, 10]);
 C2_PHASE_3.days[2].groups[2] = DROP("C", "Single-arm overhead DB triceps extension", [10, 8, 8], "/ arm");
 
 /* ================================ CYCLE 3 ================================ */
-// New exercise variations in the same 4-day / 3-phase frame. Only three names
-// carry a "last time" reference from earlier cycles: Incline DB press, Leg press
-// (moved to slot B, 12 reps, drop-set finisher in Phase 3) and Hip thrust.
+// New exercise variations in the same 4-day / 3-phase frame. Four names carry a
+// "last time" reference from earlier cycles: Incline DB press, Leg press, Hip
+// thrust and Seated leg curl.
 // Rest: 60 sec while the new movements are learned (weeks 1-2), then 45 sec.
+// SPINE RULE (John, 2026-11-16: three herniated lower-lumbar discs): no hip
+// hinges under load, no loaded spinal flexion or rotation, no standing overhead
+// pressing, core work is neutral-spine bracing only.
 
 export const C3_PHASE_REST = {
   1: { label: "60 sec", secs: 60 },
@@ -303,7 +306,7 @@ const C3_PHASE_1 = {
       groups: [
         G("A", "circuit", 4, [
           E("Neutral-grip DB bench press", 10, "8–10 reps", "palms facing each other, elbows about 45° from the ribs"),
-          E("Seated cable row (wide grip)", 10, "8–10 reps", "long bar, pull to the lower chest"),
+          E("Seated cable row (wide grip)", 10, "8–10 reps", "long bar to the lower chest — sit tall, no rocking"),
         ]),
         G("B", "circuit", 3, [
           E("Incline DB press", 10),
@@ -311,10 +314,10 @@ const C3_PHASE_1 = {
         ]),
         G("C", "circuit", 3, [
           E("Incline DB flye", 12),
-          E("DB pullover", 12, "12 reps", "slight elbow bend, ribs down"),
+          E("DB pullover", 12, "12 reps", "lie along the bench, slight elbow bend — low back stays flat"),
         ]),
         G("D", "circuit", 2, [
-          E("Push-up (feet elevated)", null, "max reps", "feet on a bench"),
+          E("Push-up (feet elevated)", null, "max reps", "feet on a bench, glutes tight — stop when the hips sag"),
           E("Band pull-apart", 15),
         ]),
       ],
@@ -322,22 +325,24 @@ const C3_PHASE_1 = {
     {
       title: DAY_TITLES[1],
       groups: [
+        // Heavy leg work stays on the back-supported leg press; the squat is the
+        // lighter, higher-rep slot and drops out when Phase 3 fatigue is highest.
         G("A", "circuit", 4, [
-          E("Goblet squat (heels elevated)", 10, "10 reps", "heels on a plate or wedge, torso tall"),
-          E("Single-leg leg curl", 10, "10 / leg"),
+          E("Leg press", 10, "10 reps", "controlled range — stop before the pelvis tucks under"),
+          E("B-stance hip thrust", 10, "10 / side", "DB on the hips, ribs down — finish with the glutes, not the low back"),
         ]),
         G("B", "circuit", 3, [
-          E("DB Romanian deadlift", 10, "10 reps", "soft knees, hips back, flat back — stop at mid-shin"),
-          E("Leg press", 12, "12 reps", "controlled range — stop before the pelvis tucks under"),
+          E("Goblet squat (heels elevated)", 12, "12 reps", "heels on a plate, torso tall — stop before the pelvis tucks under"),
+          E("Seated leg curl", 12),
         ]),
         G("C", "circuit", 3, [
-          E("Bulgarian split squat", 8, "8 / leg", "rear foot on a bench, DBs at your sides"),
+          E("Bulgarian split squat", 8, "8 / leg", "rear foot on a bench, DBs at your sides, torso tall"),
           E("Single-leg calf raise", 12, "12 / leg", "off a step, DB in one hand"),
         ]),
         G("D", "circuit", 2, [
           E("Copenhagen plank", 20, "20 sec / side", "top knee on a bench (short lever)"),
-          E("Bear plank shoulder tap", 10, "10 / side", "knees hover an inch off the floor"),
-          E("Half-kneeling cable chop", 10, "10 / side", "high to low"),
+          E("Bear plank shoulder tap", 10, "10 / side", "knees hover an inch off the floor, hips stay square"),
+          E("Half-kneeling Pallof press", 10, "10 / side", "press straight out and hold a beat — no twisting"),
         ]),
       ],
     },
@@ -345,7 +350,7 @@ const C3_PHASE_1 = {
       title: DAY_TITLES[2],
       groups: [
         G("A", "circuit", 4, [
-          E("Standing DB shoulder press", 8, "8 reps", "glutes tight, ribs down — no leaning back"),
+          E("Seated neutral-grip DB press", 8, "8 reps", "back against the pad, palms facing in"),
           E("Lean-away lateral raise", 12, "12 / arm", "hold an upright, lean out, raise the outside arm"),
         ]),
         G("B", "circuit", 3, [
@@ -370,14 +375,14 @@ const C3_PHASE_1 = {
           E("Inverted row", 10, "10 reps", "bar in a rack or Smith at waist height; bend the knees to make it easier"),
         ]),
         G("B", "circuit", 3, [
-          E("DB lateral lunge", 8, "8 / leg", "one DB at the chest"),
+          E("DB lateral lunge", 8, "8 / leg", "light DB at the chest, sit the hip back, chest tall"),
           E("Frog pump", 20, "20 reps", "soles together, knees out"),
-          E("Plank DB drag", 8, "8 / side", "high plank, drag the DB under to the other side"),
-          E("Goblet carry", 40, "40 yd", "one heavy DB at the chest, ribs down"),
+          E("Plank DB drag", 8, "8 / side", "high plank, drag the DB under to the other side, hips stay square"),
+          E("Goblet carry", 40, "40 yd", "moderate DB at the chest, ribs down, tall posture"),
         ]),
         G("C", "circuit", 2, [
-          E("Hanging knee raise", 10, "10 reps", "no swinging"),
-          E("Long-lever plank", 30, "30 sec", "elbows a few inches ahead of the shoulders"),
+          E("McGill curl-up", 6, "6 / side", "one knee bent, hands under the low back, lift head and shoulders an inch, hold 8 sec"),
+          E("Forearm plank", 30, "30 sec", "glutes tight, ribs down — end the set when the hips sag"),
         ]),
       ],
     },
@@ -387,16 +392,18 @@ const C3_PHASE_1 = {
 // Phase 2: three slots become triplets. Day 4 unchanged.
 const C3_PHASE_2 = clone(C3_PHASE_1);
 C3_PHASE_2.days[0].groups[1].exercises.push(E("Low-to-high cable fly", 12));
-C3_PHASE_2.days[1].groups[0].exercises.push(E("Cable pull-through", 12));
+C3_PHASE_2.days[1].groups[0].exercises.push(
+  E("Side-lying hip abduction", 15, "15 / side", "top leg slightly behind you, toes pointed down"));
 C3_PHASE_2.days[2].groups[0].exercises.push(
   E("DB upright row", 12, "12 reps", "elbows lead, stop at shoulder height"));
 
 // Phase 3: same as Phase 2 except three slots become drop sets. Day 4 unchanged.
-// The Day 2 and Day 3 drop sets land on different movements than Cycles 1-2
-// (leg press instead of leg extension; a curl instead of a triceps extension).
+// Drop sets stay on supported isolation movements only (John has three herniated
+// lower-lumbar discs): never drop-set a squat, press or anything loading the spine.
+// Day 2 is a hamstring drop set this cycle (was leg extension); Day 3 a curl.
 const C3_PHASE_3 = clone(C3_PHASE_2);
 C3_PHASE_3.days[0].groups[2] = DROP("C", "Incline DB flye", [12, 10, 10]);
-C3_PHASE_3.days[1].groups[1] = DROP("B", "Leg press", [12, 10, 10]);
+C3_PHASE_3.days[1].groups[1] = DROP("B", "Seated leg curl", [12, 10, 10]);
 C3_PHASE_3.days[2].groups[2] = DROP("C", "Reverse-grip cable curl", [12, 10, 10]);
 
 /* ================================ CYCLES ================================ */
