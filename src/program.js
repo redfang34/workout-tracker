@@ -1,6 +1,6 @@
 // Strength programs, organised as CYCLES. Each cycle is a 6-week program:
 // 3 two-week phases x 4 training days. Cycle 1 is the original (completed)
-// program; Cycle 2 is the follow-on. Data is the single source of truth for
+// program; Cycle 2 is the follow-on; Cycle 3 swaps in new variations. Data is the single source of truth for
 // the UI; logged entries are keyed `${group.id}.${exerciseIndex}.${round}`
 // inside each session.
 
@@ -284,6 +284,121 @@ C2_PHASE_3.days[0].groups[2] = DROP("C", "Dumbbell flye", [12, 10, 10]);
 C2_PHASE_3.days[1].groups[1] = DROP("B", "Leg extension", [12, 10, 10]);
 C2_PHASE_3.days[2].groups[2] = DROP("C", "Single-arm overhead DB triceps extension", [10, 8, 8], "/ arm");
 
+/* ================================ CYCLE 3 ================================ */
+// New exercise variations in the same 4-day / 3-phase frame. Only three names
+// carry a "last time" reference from earlier cycles: Incline DB press, Leg press
+// (moved to slot B, 12 reps, drop-set finisher in Phase 3) and Hip thrust.
+// Rest: 60 sec while the new movements are learned (weeks 1-2), then 45 sec.
+
+export const C3_PHASE_REST = {
+  1: { label: "60 sec", secs: 60 },
+  2: { label: "45 sec", secs: 45 },
+  3: { label: "45 sec", secs: 45 },
+};
+
+const C3_PHASE_1 = {
+  days: [
+    {
+      title: DAY_TITLES[0],
+      groups: [
+        G("A", "circuit", 4, [
+          E("Neutral-grip DB bench press", 10, "8–10 reps", "palms facing each other, elbows about 45° from the ribs"),
+          E("Seated cable row (wide grip)", 10, "8–10 reps", "long bar, pull to the lower chest"),
+        ]),
+        G("B", "circuit", 3, [
+          E("Incline DB press", 10),
+          E("Single-arm lat pulldown", 10, "10 / arm", "D-handle on the pulldown or a high cable"),
+        ]),
+        G("C", "circuit", 3, [
+          E("Incline DB flye", 12),
+          E("DB pullover", 12, "12 reps", "slight elbow bend, ribs down"),
+        ]),
+        G("D", "circuit", 2, [
+          E("Push-up (feet elevated)", null, "max reps", "feet on a bench"),
+          E("Band pull-apart", 15),
+        ]),
+      ],
+    },
+    {
+      title: DAY_TITLES[1],
+      groups: [
+        G("A", "circuit", 4, [
+          E("Goblet squat (heels elevated)", 10, "10 reps", "heels on a plate or wedge, torso tall"),
+          E("Single-leg leg curl", 10, "10 / leg"),
+        ]),
+        G("B", "circuit", 3, [
+          E("DB Romanian deadlift", 10, "10 reps", "soft knees, hips back, flat back — stop at mid-shin"),
+          E("Leg press", 12, "12 reps", "controlled range — stop before the pelvis tucks under"),
+        ]),
+        G("C", "circuit", 3, [
+          E("Bulgarian split squat", 8, "8 / leg", "rear foot on a bench, DBs at your sides"),
+          E("Single-leg calf raise", 12, "12 / leg", "off a step, DB in one hand"),
+        ]),
+        G("D", "circuit", 2, [
+          E("Copenhagen plank", 20, "20 sec / side", "top knee on a bench (short lever)"),
+          E("Bear plank shoulder tap", 10, "10 / side", "knees hover an inch off the floor"),
+          E("Half-kneeling cable chop", 10, "10 / side", "high to low"),
+        ]),
+      ],
+    },
+    {
+      title: DAY_TITLES[2],
+      groups: [
+        G("A", "circuit", 4, [
+          E("Standing DB shoulder press", 8, "8 reps", "glutes tight, ribs down — no leaning back"),
+          E("Lean-away lateral raise", 12, "12 / arm", "hold an upright, lean out, raise the outside arm"),
+        ]),
+        G("B", "circuit", 3, [
+          E("Incline DB curl", 10, "10 reps", "bench about 60°, arms hang straight down"),
+          E("EZ-bar skull crusher", 10, "10 reps", "lower to the forehead or just behind it"),
+        ]),
+        G("C", "circuit", 3, [
+          E("Reverse-grip cable curl", 12, "12 reps", "straight or EZ attachment, palms down"),
+          E("Bench dip", 12, "12 reps", "shoulders down, stop when the elbows reach 90°"),
+        ]),
+        G("D", "circuit", 2, [
+          E("Chest-supported DB reverse fly", 15, "15 reps", "chest on an incline bench"),
+          E("Chest-supported DB shrug", 15, "15 reps", "same bench — squeeze the shoulder blades back and up"),
+        ]),
+      ],
+    },
+    {
+      title: DAY_TITLES[3],
+      groups: [
+        G("A", "circuit", 4, [
+          E("Hip thrust", 8, "8 reps", "heavier glute day"),
+          E("Inverted row", 10, "10 reps", "bar in a rack or Smith at waist height; bend the knees to make it easier"),
+        ]),
+        G("B", "circuit", 3, [
+          E("DB lateral lunge", 8, "8 / leg", "one DB at the chest"),
+          E("Frog pump", 20, "20 reps", "soles together, knees out"),
+          E("Plank DB drag", 8, "8 / side", "high plank, drag the DB under to the other side"),
+          E("Goblet carry", 40, "40 yd", "one heavy DB at the chest, ribs down"),
+        ]),
+        G("C", "circuit", 2, [
+          E("Hanging knee raise", 10, "10 reps", "no swinging"),
+          E("Long-lever plank", 30, "30 sec", "elbows a few inches ahead of the shoulders"),
+        ]),
+      ],
+    },
+  ],
+};
+
+// Phase 2: three slots become triplets. Day 4 unchanged.
+const C3_PHASE_2 = clone(C3_PHASE_1);
+C3_PHASE_2.days[0].groups[1].exercises.push(E("Low-to-high cable fly", 12));
+C3_PHASE_2.days[1].groups[0].exercises.push(E("Cable pull-through", 12));
+C3_PHASE_2.days[2].groups[0].exercises.push(
+  E("DB upright row", 12, "12 reps", "elbows lead, stop at shoulder height"));
+
+// Phase 3: same as Phase 2 except three slots become drop sets. Day 4 unchanged.
+// The Day 2 and Day 3 drop sets land on different movements than Cycles 1-2
+// (leg press instead of leg extension; a curl instead of a triceps extension).
+const C3_PHASE_3 = clone(C3_PHASE_2);
+C3_PHASE_3.days[0].groups[2] = DROP("C", "Incline DB flye", [12, 10, 10]);
+C3_PHASE_3.days[1].groups[1] = DROP("B", "Leg press", [12, 10, 10]);
+C3_PHASE_3.days[2].groups[2] = DROP("C", "Reverse-grip cable curl", [12, 10, 10]);
+
 /* ================================ CYCLES ================================ */
 
 export const CYCLES = {
@@ -300,6 +415,14 @@ export const CYCLES = {
     kicker: "Cycle 2 · 3 phases · 4 days · circuits",
     rest: C2_PHASE_REST,
     phases: { 1: C2_PHASE_1, 2: C2_PHASE_2, 3: C2_PHASE_3 },
+    weekOverrides: {},
+    phaseNotes: { 2: "three slots become tri-sets", 3: "drop-set finishers" },
+  },
+  3: {
+    id: 3,
+    kicker: "Cycle 3 · 3 phases · 4 days · circuits",
+    rest: C3_PHASE_REST,
+    phases: { 1: C3_PHASE_1, 2: C3_PHASE_2, 3: C3_PHASE_3 },
     weekOverrides: {},
     phaseNotes: { 2: "three slots become tri-sets", 3: "drop-set finishers" },
   },

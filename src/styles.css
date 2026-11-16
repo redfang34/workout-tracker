@@ -435,9 +435,12 @@ input { font: inherit; color: inherit; }
   padding: 3px;
   background: var(--panel-2);
   margin-bottom: 14px;
+  max-width: 100%;
+  overflow-x: auto;
 }
 .cyctab {
-  padding: 5px 16px;
+  padding: 5px 13px;
+  white-space: nowrap;
   border-radius: 999px;
   font-size: 18px;
   letter-spacing: 0.08em;

@@ -62,6 +62,7 @@ for (const c of CYCLE_IDS) {
   for (let w = 1; w <= 6; w++) {
     const r = restFor(c, w);
     if (c === 2) ok(r.secs === 45 && r.label === "45 sec", `C2 W${w} rest is ${r.secs}`);
+    if (c === 3) ok(r.secs === (w <= 2 ? 60 : 45), `C3 W${w} rest is ${r.secs}`);
     console.log(`  W${w}: rest ${r.secs}s, sets/day ${[1, 2, 3, 4].map((d) => totalSets(dayDefFor(c, w, d))).join("/")}`);
   }
 }
@@ -79,8 +80,29 @@ ok(!c1.has("Standing hip abduction (cable)"), "cable hip abduction must NOT inhe
 ok(!c1.has("Seated leg curl") && !c1.has("Cable lateral raise") && !c1.has("EZ-bar curl"), "variations must be fresh");
 ok(c1.has("Hip thrust") && c1.has("Dumbbell flye") && c1.has("Leg press"), "exact matches must carry");
 
+// 3b. Cycle 3: only the three kept compounds may inherit history; every variation starts fresh
+const c3 = namesIn(3), earlier = new Set([...c1, ...c2]);
+const carry3 = [...c3].filter((n) => earlier.has(n)).sort();
+const fresh3 = [...c3].filter((n) => !earlier.has(n)).sort();
+console.log(`\n== Cycle 3 names that carry an earlier reference (${carry3.length}) ==\n  ${carry3.join("\n  ")}`);
+console.log(`\n== Cycle 3 names starting fresh (${fresh3.length}) ==\n  ${fresh3.join("\n  ")}`);
+ok(JSON.stringify(carry3) === JSON.stringify(["Hip thrust", "Incline DB press", "Leg press"]),
+  `Cycle 3 carry-over must be exactly Hip thrust / Incline DB press / Leg press, got: ${carry3.join(", ")}`);
+// a fresh name must not be a re-spelling of an earlier one either
+const earlierNorm = new Set([...earlier].map(norm));
+for (const n of fresh3) ok(!earlierNorm.has(norm(n)), `Cycle 3 "${n}" is a re-spelling of an earlier name`);
+// Phase 3 drop sets land where intended
+const dropNames = (c) => [1, 2, 3, 4].flatMap((d) =>
+  dayDefFor(c, 5, d).groups.filter((g) => g.kind === "dropset").map((g) => `D${d}-${g.id} ${g.exercises[0].name}`));
+ok(JSON.stringify(dropNames(3)) === JSON.stringify(["D1-C Incline DB flye", "D2-B Leg press", "D3-C Reverse-grip cable curl"]),
+  `Cycle 3 drop sets: ${dropNames(3).join(" | ")}`);
+// Day 4 identical across phases
+ok(JSON.stringify(dayDefFor(3, 1, 4)) === JSON.stringify(dayDefFor(3, 6, 4)), "Cycle 3 Day 4 must not change between phases");
+
 // 4. keys
 console.log("\n== keys ==");
+ok(sk(3, 1, 1) === "c3w1d1" && orderOf("c3w1d1") === 48 && labelOf("c3w6d4") === "C3·W6·D4", "cycle 3 keys");
+ok(startOf({ startDate: "2026-08-03", cycleStart: { 3: "2026-11-16" } }, 3) === "2026-11-16", "startOf c3");
 ok(sk(1, 3, 2) === "w3d2" && sk(2, 3, 2) === "c2w3d2", "sk");
 ok(JSON.stringify(parseKey("w6d4")) === '{"c":1,"w":6,"d":4}', "parse cycle 1");
 ok(JSON.stringify(parseKey("c2w1d1")) === '{"c":2,"w":1,"d":1}', "parse cycle 2");
